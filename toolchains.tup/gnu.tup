@@ -1,0 +1,20 @@
+ifdef CC
+	CC=@(CC)
+else
+	CC=gcc
+endif
+
+ifdef LIBS_COMMAND
+	LIBS_COMMAND=@(LIBS_COMMAND)
+else
+	LIBS_COMMAND=-lws2_32
+endif
+
+ifdef LIBS_SERVICE
+	LIBS_SERVICE=@(LIBS_SERVICE)
+else
+	LIBS_SERVICE=-ladvapi32 -lws2_32
+endif
+
+!cc = |> $(CC) -c @(CFLAGS) -o %o %f |> %B.o
+!ld = |> $(CC) @(LDFLAGS) -o %o %f $(LIBS) |>

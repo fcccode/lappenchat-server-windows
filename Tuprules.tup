@@ -1,0 +1,17 @@
+.gitignore
+
+
+ifdef TOOLCHAIN
+	TOOLCHAIN=@(TOOLCHAIN)
+else
+	ifeq (@(TUP_PLATFORM),win32)
+		# Use Microsoft's native compiler if building on Windows
+		TOOLCHAIN=msvc
+	else
+		# Otherwise, go for MinGW
+		TOOLCHAIN=gnu
+	endif
+endif
+
+# Include the appropriate toolchain definition file
+include toolchains.tup/$(TOOLCHAIN).tup

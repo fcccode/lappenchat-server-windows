@@ -1,0 +1,38 @@
+ifdef CL
+	CL=@(CL)
+else
+	CL=cl.exe
+endif
+
+ifdef CLFLAGS
+	CLFLAGS=@(CLFLAGS)
+else
+	CLFLAGS=/nologo /W4 /wd4057 /wd4100 /wd4204 /wd4244 /wd4706 /wd4996 /WX /MT /Ox /Gs- /GF /GL /Gw /Gy
+endif
+
+ifdef LDFLAGS
+	LDFLAGS=@(LDFLAGS)
+else
+	LDFLAGS=/nologo /W4 /wd4057 /wd4100 /wd4204 /wd4244 /wd4706 /wd4996 /WX
+endif
+
+ifdef LINKFLAGS
+	LINKFLAGS=@(LINKFLAGS)
+else
+	LINKFLAGS=/LTCG /OPT:REF,ICF
+endif
+
+ifdef LIBS_COMMAND
+	LIBS_COMMAND=@(LIBS_COMMAND)
+else
+	LIBS_COMMAND=ws2_32.lib
+endif
+
+ifdef LIBS_SERVICE
+	LIBS_SERVICE=@(LIBS_SERVICE)
+else
+	LIBS_SERVICE=advapi32.lib ws2_32.lib
+endif
+
+!cc = |> $(CL) /c $(CLFLAGS) /Fo%o %f |> %B.obj
+!ld = |> $(CL) $(LDFLAGS) /Fe%o %f $(LIBS) /link $(LINKFLAGS) |>

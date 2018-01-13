@@ -1,0 +1,12 @@
+include_rules
+
+
+: foreach common.c server.c error.c logmsg.c |> !cc |> {objs}
+
+: command.c |> !cc |> {command_obj}
+LIBS=$(LIBS_COMMAND)
+: {command_obj} {objs} |> !ld |> lappenchat-server-command.exe
+
+: service.c |> !cc |> {service_obj}
+LIBS=$(LIBS_SERVICE)
+: {service_obj} {objs} |> !ld |> lappenchat-server-service.exe
