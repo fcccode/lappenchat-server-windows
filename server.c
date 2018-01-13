@@ -121,7 +121,10 @@ get_ipv6_socket
 		
 		/* By disabling the IPV6_V6ONLY option, it would be possible
 		 * to handle both IPv4 and IPv6 with the same socket. */
-		//setsockopt(ss_ipv6, IPPROTO_IPV6, IPV6_V6ONLY, (const char *)(DWORD[]){0}, sizeof(DWORD));
+		
+		/* Enable the IPV6_V6ONLY socket option to make this an IPv6-only socket.
+		 * Otherwise, failure might ensue, with the two IP sockets clashing. */
+		setsockopt(ss_ipv6, IPPROTO_IPV6, IPV6_V6ONLY, (const char *)(DWORD[]){1}, sizeof(DWORD));
 		
 		struct sockaddr_in6 localhost_ipv6 = {
 			.sin6_family = AF_INET6,
