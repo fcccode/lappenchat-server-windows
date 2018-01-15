@@ -451,6 +451,13 @@ lappenchat_server_inner_completionport
 	SOCKET * const sockets_end = server_sockets + server_sockets_n;
 	WSAEVENT * const server_event_handles = event_handles + 1;
 	WSAEVENT * const event_handles_end = event_handles + server_sockets_n + 1;
+	/* We create threads-1 threads because our main thread does do something
+	 * and shall thus count as well. What it does is handle incoming connection
+	 * requests and accept them. This we could handle in the worker threads too
+	 * if we used AcceptEx. */
+	const DWORD threads_to_create = (DWORD)threads-1;
+	HANDLE * thread_handles_beg;
+	HANDLE * thread_handles_end = NULL; // Not actually necessary; just to placate the compiler
 	
 	{
 		WSAEVENT * event_handles_ptr = server_event_handles;
@@ -474,29 +481,34 @@ lappenchat_server_inner_completionport
 	
 	if ( shared.completion_port = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0) )
 	{
-		size_t created = 0;
-		/* We create threads-1 threads because our main thread does do something
-		 * and shall thus count as well. What it does is handle incoming connection
-		 * requests and accept them. This we could handle in the worker threads too
-		 * if we used AcceptEx. */
-		for ( size_t i = 0, threads_to_create = threads-1 ; i < threads_to_create ; ++i )
-		{
-			HANDLE thread;
-			if ( thread = CreateThread(NULL, 0, worker_thread, &shared, 0, NULL) )
-			{
-				++created;
-				CloseHandle(thread);
-			}
-			else
-				winapi_perror("couldn't create worker thread");
-		}
 		
-		/* Don't fail if at least one thread could be created */
-		if ( created )
-			logmsgf("successfully spawned %zu threads\n", created);
+		thread_handles_beg = calloc(threads_to_create, sizeof(*thread_handles_beg));
+		if ( thread_handles_beg )
+		{
+			thread_handles_end = thread_handles_beg + threads_to_create;
+			
+			size_t created = 0;
+			
+			for ( HANDLE * cur = thread_handles_beg ; cur != thread_handles_end ; ++cur )
+			{
+				if ( *cur = CreateThread(NULL, 0, worker_thread, &shared, 0, NULL) )
+					++created;
+				else
+					winapi_perror("couldn't create worker thread");
+			}
+			
+			/* Don't fail if at least one thread could be created */
+			if ( created )
+				logmsgf("successfully spawned %zu threads\n", created);
+			else
+			{
+				logmsg("error: couldn't create any worker threads");
+				rv = 0;
+			}
+		}
 		else
 		{
-			logmsg("error: couldn't create any worker threads");
+			logmsg("couldn't allocate memory for the thread handles");
 			rv = 0;
 		}
 	}
@@ -504,6 +516,7 @@ lappenchat_server_inner_completionport
 	{
 		winapi_perror("couldn't create completion port");
 		rv = 0;
+		thread_handles_beg = NULL;
 	}
 	
 	if ( !(shared.client_pool_mutex = CreateMutex(NULL, FALSE, NULL)) )
@@ -665,6 +678,26 @@ lappenchat_server_inner_completionport
 			logmsg("successfully disposed of completion port");
 		else
 			winapi_perror("couldn't dispose of completion port");
+		
+		if ( thread_handles_beg )
+		{
+			switch ( WaitForMultipleObjects(threads_to_create, thread_handles_beg, TRUE, INFINITE) )
+			{
+				case WAIT_OBJECT_0:
+				case WAIT_ABANDONED_0:
+					logmsg("all worker threads ended");
+					break;
+				case WAIT_FAILED:
+					winapi_perror("couldn't wait for worker threads to exit");
+			}
+			
+			for ( HANDLE * cur = thread_handles_beg ; cur != thread_handles_end ; ++cur )
+			{
+				HANDLE thread_handle = *cur;
+				if ( thread_handle )
+					CloseHandle(thread_handle);
+			}
+		}
 	}
 	
 	for ( WSAEVENT * cur = server_event_handles ; cur != event_handles_end ; ++cur )
