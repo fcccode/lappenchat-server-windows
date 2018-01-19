@@ -155,7 +155,7 @@ typedef struct {
 	/* This member must be the first one - either
 	 * that, or use CONTAINING_RECORD */
 	WSAOVERLAPPED wsa_overlapped;
-	char message_length;
+	unsigned char message_length;
 	unsigned char received;
 	char buffer[290];
 } OperationData;
