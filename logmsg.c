@@ -11,8 +11,7 @@ void logmsg
  const char * const msg
 )
 {
-	fputs(msg, logout);
-	fputc('\n', logout);
+	fprintf(logout, "%s\n", msg);
 	fflush(logout);
 }
 
